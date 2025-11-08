@@ -111,7 +111,7 @@ public class Main {
                 "GGCTTACGATCGTAGCTAGCAGTTAGCTAACGTTAGCTAGCTAACGTTAT"
         );
 
-        try (FileWriter csvWriter = new FileWriter("results.csv")) {
+        try (FileWriter csvWriter = new FileWriter("greedy-results.csv")) {
             // Write CSV header
             csvWriter.append("k,SequenceIndex,SeqA_Length,SeqB_Length,StartA,EndA,StartB,EndB,MotifA,MotifB,Score,Runtime_ms,MemUsage_KB\n");
 
@@ -155,8 +155,50 @@ public class Main {
             }
 
             csvWriter.flush();
-            System.out.println("Results written to results.csv");
+            System.out.println("Greedy results written to greedy-results.csv");
 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try (FileWriter csvWriter = new FileWriter("dynamic-results.csv")) {
+            csvWriter.append("SequenceIndex,SeqA_Length,SeqB_Length,StartA,EndA,StartB,EndB,LocalA,LocalB,Score,Runtime_ms,MemUsage_KB\n");
+
+            for (int i = 0; i < seqsA.size(); i++) {
+                long startTime = System.nanoTime();
+                Runtime runtime = Runtime.getRuntime();
+                runtime.gc();
+                long memBefore = runtime.totalMemory() - runtime.freeMemory();
+
+                String seqA = seqsA.get(i);
+                String seqB = seqsB.get(i);
+
+                DynamicLocalAlignment.Alignment result = DynamicLocalAlignment.align(seqA, seqB);
+
+                long endTime = System.nanoTime();
+                long memAfter = runtime.totalMemory() - runtime.freeMemory();
+
+                double time = ((endTime - startTime) / 1_000_000.0);
+                double totalMemUsage = (memAfter - memBefore) / 1024.0;
+
+                csvWriter.append(String.format(
+                        "%d,%d,%d,%d,%d,%d,%d,%s,%s,%.2f,%.3f,%.3f\n",
+                        (i + 1),
+                        seqA.length(),
+                        seqB.length(),
+                        result.startA,
+                        result.endA,
+                        result.startB,
+                        result.endB,
+                        result.alignedA,
+                        result.alignedB,
+                        result.score,
+                        time,
+                        totalMemUsage
+                ));
+            }
+            csvWriter.flush();
+            System.out.println("Dynamic results written to dynamic-results.csv");
         } catch (IOException e) {
             e.printStackTrace();
         }
